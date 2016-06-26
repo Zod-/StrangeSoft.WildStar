@@ -41,12 +41,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AdvancedArchiveResourceContainerDescriptor.cs" />
     <Compile Include="ArchiveBlockDescriptor.cs" />
     <Compile Include="ArchiveDirectoryEntry.cs" />
     <Compile Include="ArchiveEntry.cs" />
     <Compile Include="ArchiveFileEntry.cs" />
     <Compile Include="ArchiveIndex.cs" />
-    <Compile Include="ArchiveResourceContainerDescriptor.cs" />
+    <Compile Include="ArchiveResourceEntry.cs" />
     <Compile Include="BlockTable.cs" />
     <Compile Include="BlockTableEntry.cs" />
     <Compile Include="FileHeader.cs" />
@@ -56,6 +57,7 @@
     <Compile Include="IArchiveFileEntry.cs" />
     <Compile Include="PackDescriptor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ResourceContainerTable.cs" />
     <Compile Include="Signatures.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

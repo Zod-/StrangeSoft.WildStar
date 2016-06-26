@@ -27,12 +27,12 @@ namespace StrangeSoft.WildStar.Archive
                     ret.Populate(magic, reader);
                     break;
                 case Signatures.Archive:
-                    ret = new ArchiveResourceContainerDescriptor();
+                    ret = new AssetArchiveResourceContainerDescriptor();
                     ret.Populate(magic, reader);
                     break;
             }
-            if (ret == null)
-                Debug.WriteLine($"WARN: Unknown magic: {magic:X8}");
+            //if (ret == null)
+            //    Debug.WriteLine($"WARN: Unknown magic: {magic:X8}");
             return ret;
         }
     }

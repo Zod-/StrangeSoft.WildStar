@@ -7,8 +7,8 @@ namespace StrangeSoft.WildStar.Archive
         int Flags { get; }
         long CompressedSize { get; }
         long UncompressedSize { get; }
-        byte[] Hash { get; }
-
+        string Hash { get; }
+        
         Stream Open();
     }
 }

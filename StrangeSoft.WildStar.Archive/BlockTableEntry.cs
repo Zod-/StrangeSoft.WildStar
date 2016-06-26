@@ -2,17 +2,17 @@ using System.IO;
 
 namespace StrangeSoft.WildStar.Archive
 {
-    public struct BlockTableEntry
+    public class BlockTableEntry
     {
-        public ulong DirectoryOffset;
-        public ulong BlockSize;
+        public long DirectoryOffset { get; set; }
+        public long BlockSize { get; set; }
 
         public static BlockTableEntry FromReader(BinaryReader reader)
         {
             var ret = new BlockTableEntry
             {
-                DirectoryOffset = reader.ReadUInt64(),
-                BlockSize = reader.ReadUInt64()
+                DirectoryOffset = reader.ReadInt64(),
+                BlockSize = reader.ReadInt64()
             };
             return ret;
         }
