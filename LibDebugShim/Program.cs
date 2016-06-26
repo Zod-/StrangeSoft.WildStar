@@ -74,9 +74,13 @@ namespace LibDebugShim
             
             //}
 
-            foreach (var rootDirectory in assets.RootDirectoryEntries)
+            foreach (var obj in assets.RootDirectoryEntries)
             {
-                rootDirectory.ExtractTo(@"D:\WSData");
+                obj.ExtractTo(@"D:\WSData");
+                //if (string.Equals(obj.Name, "Gacha.lua", StringComparison.InvariantCultureIgnoreCase))
+                //{
+                //    Console.WriteLine($"{obj}");
+                //}
             }
         }
 

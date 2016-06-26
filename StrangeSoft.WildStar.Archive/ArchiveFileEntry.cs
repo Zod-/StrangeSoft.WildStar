@@ -2,6 +2,12 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using SevenZip;
+using SharpCompress.Archive.SevenZip;
+using SharpCompress.Compressor.BZip2;
+using SharpCompress.Compressor.LZMA;
+using SharpCompress.Compressor.PPMd;
+using CompressionMode = System.IO.Compression.CompressionMode;
 
 namespace StrangeSoft.WildStar.Archive
 {
@@ -25,8 +31,8 @@ namespace StrangeSoft.WildStar.Archive
         public long UncompressedSize { get; }
         public string Hash { get; }
         public int Reserved2 { get; }
-        public bool IsCompressed => Deflate | GZip;
-        public bool GZip => (Flags & 4) == 4;
+        public bool IsCompressed => Deflate | Rar;
+        public bool Rar => (Flags & 4) == 4;
         public bool Deflate => (Flags & 2) == 2;
         public ArchiveResourceEntry ResourceEntry => Assets.LocateArchiveWithAsset(Hash)?.AssetResourceTable?.Lookup(Hash);
         public override bool Exists => ExistsInArchive || ExistsOnDisk;
@@ -55,7 +61,7 @@ namespace StrangeSoft.WildStar.Archive
         public BlockTableEntry TableEntry => Exists ? Assets.LocateArchiveWithAsset(Hash)?.BlockTable[ResourceEntry.BlockIndex] : null;
         public Stream Open()
         {
-            if(!Exists) throw new FileNotFoundException();
+            if (!Exists) throw new FileNotFoundException();
             if (ExistsInArchive)
                 return ReadBlockData(TableEntry);
             else
@@ -72,7 +78,7 @@ namespace StrangeSoft.WildStar.Archive
 
         public override string ToString()
         {
-            return base.ToString() + $" (Flags: {Flags}, Exists: {(Exists ? "Yes" : "No")}, Raw size: {CompressedSize}, Uncompressed Size: {UncompressedSize} AARC Data: {(ResourceEntry == null ? "N/A" : $"Hash: {ResourceEntry.Hash}, Block Number: {ResourceEntry.BlockIndex}, Uncompressed Size: {ResourceEntry.UncompressedSize}" )})";
+            return base.ToString() + $" (Flags: {Flags}, Exists: {(Exists ? "Yes" : "No")}, Raw size: {CompressedSize}, Uncompressed Size: {UncompressedSize} AARC Data: {(ResourceEntry == null ? "N/A" : $"Hash: {ResourceEntry.Hash}, Block Number: {ResourceEntry.BlockIndex}, Uncompressed Size: {ResourceEntry.UncompressedSize}")})";
         }
 
         static object fileCreationLock = new object();
@@ -112,15 +118,19 @@ namespace StrangeSoft.WildStar.Archive
             var rawDataStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read);
             if (Deflate)
                 return new DeflateStream(rawDataStream, CompressionMode.Decompress, false);
-            if (GZip)
-                return new GZipStream(rawDataStream, CompressionMode.Decompress, false);
+            if (Rar)
+            {
+                //rawDataStream.Seek(1, SeekOrigin.Begin);
+                return new LzmaDecodeStream(rawDataStream);
+            }
+            // TODO: Handle the new format
             return rawDataStream;
         }
 
 
         public override void ExtractTo(string folder, string fileName = null)
         {
-            if(folder == null) throw new ArgumentNullException(nameof(folder));
+            if (folder == null) throw new ArgumentNullException(nameof(folder));
             fileName = fileName ?? Name;
             using (var fileStream = Open())
             {
