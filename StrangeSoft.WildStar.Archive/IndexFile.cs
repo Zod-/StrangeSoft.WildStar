@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 
 namespace StrangeSoft.WildStar.Archive
 {
-
     public class IndexFile : IDisposable
     {
         private readonly Stream _stream;
@@ -21,10 +20,39 @@ namespace StrangeSoft.WildStar.Archive
             _stream = stream;
             _archiveStream = archiveStream;
             _closeUnderlyingStreamOnDispose = closeUnderlyingStreamOnDispose;
-
-            ReadIndexData();
-            LoadEntryIndex();
+            _indexBlockTableLazy = new Lazy<BlockTable>(LoadIndexBlockTable);
+            _archiveBlockTableLazy = new Lazy<BlockTable>(LoadArchiveBlockTable);
+            _lazyArchiveIndex = new Lazy<ArchiveIndex>(LoadEntryIndex);
+            _lazyIndexBlockDescriptors = new Lazy<List<ArchiveBlockDescriptor>>(() => GetDescriptors(IndexBlockTableEntries, _stream).ToList());
+            _lazyArchiveBlockDescriptors = new Lazy<List<ArchiveBlockDescriptor>>(() => GetDescriptors(ArchiveBlockTable, _archiveStream).ToList());
             LoadDirectoryEntries();
+            var blockDescriptors = _lazyArchiveBlockDescriptors.Value;
+        }
+
+        private BlockTable LoadArchiveBlockTable()
+        {
+            return LoadBlockTable(_archiveStream);
+        }
+
+        private BlockTable LoadIndexBlockTable()
+        {
+            return LoadBlockTable(_stream);
+        }
+
+
+        private BlockTable LoadBlockTable(Stream stream, uint magic = Signatures.Pack, uint version = 1)
+        {
+            lock (stream)
+            {
+                using (var binaryReader = new BinaryReader(stream, Encoding.UTF8, true))
+                {
+                    stream.Seek(0, SeekOrigin.Begin);
+                    var header = FileHeader.Load(binaryReader);
+                    if (header.Magic != magic) throw new InvalidDataException("The file signature does not match the expected signature, the file is not valid.");
+                    if (header.Version != version) throw new InvalidOperationException($"This library only supports version 0x{1:X8}, but the file appears to be version 0x{version:X8}");
+                    return BlockTable.Load(binaryReader);
+                }
+            }
         }
 
 
@@ -34,75 +62,46 @@ namespace StrangeSoft.WildStar.Archive
             RootDirectory = directoryEntry;
         }
 
-        private List<BlockTableEntry> _blockTable = new List<BlockTableEntry>();
+        private Lazy<BlockTable> _indexBlockTableLazy;
+        private Lazy<BlockTable> _archiveBlockTableLazy;
+        private Lazy<ArchiveIndex> _lazyArchiveIndex;
         private Stream _archiveStream;
 
         public IArchiveDirectoryEntry RootDirectory { get; private set; }
 
-        public ArchiveIndex EntryIndex { get; private set; }
+        public ArchiveIndex EntryIndex => _lazyArchiveIndex.Value;
 
-        public IReadOnlyList<BlockTableEntry> BlockTableEntries => _blockTable.AsReadOnly();
+        public BlockTable IndexBlockTableEntries => _indexBlockTableLazy.Value;
+        public BlockTable ArchiveBlockTable => _archiveBlockTableLazy.Value;
 
-
-        private void ReadIndexData()
+        private IEnumerable<ArchiveBlockDescriptor> GetDescriptors(BlockTable blockTable, Stream stream)
         {
-            lock (_stream)
+            using (var binaryReader = new BinaryReader(stream, Encoding.UTF8, true))
             {
-                using (var binaryReader = new BinaryReader(_stream, Encoding.UTF8, true))
+                foreach (var entry in blockTable)
                 {
-                    _stream.Seek(0, SeekOrigin.Begin);
-                    var signature = binaryReader.ReadUInt32();
-                    if (signature != Signatures.Pack) throw new InvalidDataException("The file signature does not match the expected signature, the file is not valid.");
-                    var version = binaryReader.ReadUInt32();
-                    if (version != 1) throw new InvalidOperationException($"This library only supports version 0x{1:X8}, but the file appears to be version 0x{version:X8}");
-
-                    _stream.Seek(544, SeekOrigin.Begin);
-                    var directoryCount = binaryReader.ReadUInt32();
-                    _stream.Seek(536, SeekOrigin.Begin);
-                    var directoryTableStart = binaryReader.ReadUInt64();
-
-                    Debug.WriteLine($"directoryCount: {directoryCount}, table offset: {directoryTableStart}");
-
-                    _stream.Seek((long)directoryTableStart, SeekOrigin.Begin);
-
-
-                    for (var x = 0; x < directoryCount; x++)
-                    {
-                        _blockTable.Add(BlockTableEntry.FromReader(binaryReader));
-
-                        Debug.WriteLine($"Read directory header with offset: 0x{_blockTable[x].DirectoryOffset:X16}, block size: 0x{_blockTable[x].BlockSize:X16}");
-                    }
-                    // TODO
-
+                    _stream.Seek((long) entry.DirectoryOffset, SeekOrigin.Begin);
+                    var magic = binaryReader.ReadUInt32();
+                    var blockDescriptor = ArchiveBlockDescriptor.Create(magic, binaryReader);
+                    if (blockDescriptor != null) yield return blockDescriptor;
                 }
             }
         }
 
-        private void LoadEntryIndex()
+        private Lazy<List<ArchiveBlockDescriptor>> _lazyIndexBlockDescriptors;
+        private Lazy<List<ArchiveBlockDescriptor>> _lazyArchiveBlockDescriptors;
+
+        public IEnumerable<ArchiveBlockDescriptor> IndexBlockDescriptors => _lazyIndexBlockDescriptors.Value;
+
+        private ArchiveIndex LoadEntryIndex()
         {
-            using (var binaryReader = new BinaryReader(_stream, Encoding.UTF8, true))
+
+            var archiveIndex = IndexBlockDescriptors.OfType<ArchiveIndex>().FirstOrDefault();
+            if (archiveIndex == null)
             {
-                ArchiveIndex archiveIndex = new ArchiveIndex();
-                foreach (var entry in _blockTable)
-                {
-                    if (entry.BlockSize < 16) continue;
-
-                    _stream.Seek((long)entry.DirectoryOffset, SeekOrigin.Begin);
-                    var aidx = ArchiveIndex.FromReader(binaryReader);
-                    if (aidx.Magic == Signatures.ArchiveIndex)
-                    {
-                        archiveIndex = aidx;
-                        break;
-                    }
-                }
-
-                if (archiveIndex.Magic != Signatures.ArchiveIndex)
-                {
-                    throw new InvalidOperationException("Could not find AIDX entry in file, file appears invalid!");
-                }
-
-                EntryIndex = archiveIndex;
+                throw new InvalidOperationException("Could not find AIDX entry in file, file appears invalid!");
             }
+            return archiveIndex;
         }
 
         public static IndexFile FromFileInfo(FileInfo file)

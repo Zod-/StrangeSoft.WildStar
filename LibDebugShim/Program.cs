@@ -14,8 +14,8 @@ namespace LibDebugShim
         {
             using (
                 var indexFile =
-                    IndexFile.FromFileInfo(
-                        new FileInfo(@"C:\Program Files (x86)\Steam\steamapps\common\WildStar\Patch\clientdata.index")))
+                    IndexFile.Create(
+                        new FileInfo(@"C:\Program Files (x86)\Steam\steamapps\common\WildStar\Patch\clientdata.index"), new FileInfo(@"C:\Program Files (x86)\Steam\steamapps\common\WildStar\Patch\clientdata.archive")))
             {
                 DateTimeOffset start = DateTimeOffset.Now;
                 var allDirectories = GetAllDirectories(indexFile.RootDirectory).ToList();

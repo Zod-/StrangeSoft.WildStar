@@ -21,7 +21,7 @@ namespace StrangeSoft.WildStar.Archive
 
         protected long Offset => (long)BlockTableEntry.DirectoryOffset;
         protected long Size => (long)BlockTableEntry.BlockSize;
-        protected BlockTableEntry BlockTableEntry => Index.BlockTableEntries[_blockNumber];
+        protected BlockTableEntry BlockTableEntry => Index.IndexBlockTableEntries[_blockNumber];
 
         public override string ToString()
         {

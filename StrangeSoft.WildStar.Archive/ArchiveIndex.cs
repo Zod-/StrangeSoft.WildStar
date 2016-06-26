@@ -2,22 +2,18 @@ using System.IO;
 
 namespace StrangeSoft.WildStar.Archive
 {
-    public struct ArchiveIndex
+    public class ArchiveIndex : ArchiveBlockDescriptor
     {
-        public uint Magic;
-        public uint Version;
-        public uint Reserved;
-        public uint RootBlock;
+        public uint Version { get; private set; }
+        public uint Reserved { get; private set; }
+        public uint RootBlock { get; private set; }
 
-        public static ArchiveIndex FromReader(BinaryReader reader)
+        internal override void Populate(uint magic, BinaryReader reader)
         {
-            return new ArchiveIndex
-            {
-                Magic = reader.ReadUInt32(),
-                Version = reader.ReadUInt32(),
-                Reserved = reader.ReadUInt32(),
-                RootBlock = reader.ReadUInt32()
-            };
+            base.Populate(magic, reader);
+            Version = reader.ReadUInt32();
+            Reserved = reader.ReadUInt32();
+            RootBlock = reader.ReadUInt32();
         }
     }
 }
