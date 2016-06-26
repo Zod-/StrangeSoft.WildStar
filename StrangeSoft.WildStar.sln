@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StrangeSoft.WildStar.Archive", "StrangeSoft.WildStar.Archive\StrangeSoft.WildStar.Archive.csproj", "{67093B6E-AD3A-4760-BA79-1238232BAD9E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibDebugShim", "LibDebugShim\LibDebugShim.csproj", "{1267447A-1EC3-4AFC-9C83-BBAF5CBDD55E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{67093B6E-AD3A-4760-BA79-1238232BAD9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67093B6E-AD3A-4760-BA79-1238232BAD9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67093B6E-AD3A-4760-BA79-1238232BAD9E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1267447A-1EC3-4AFC-9C83-BBAF5CBDD55E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1267447A-1EC3-4AFC-9C83-BBAF5CBDD55E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1267447A-1EC3-4AFC-9C83-BBAF5CBDD55E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1267447A-1EC3-4AFC-9C83-BBAF5CBDD55E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
