@@ -68,7 +68,7 @@ namespace StrangeSoft.WildStar.Archive
         public override bool Exists => true;
 
 
-        public override void ExtractTo(string folder, string name = null)
+        public override void ExtractTo(string folder, string name = null, bool raw = false)
         {
             name = name ?? Name;
             DirectoryInfo target = Directory.CreateDirectory(string.IsNullOrWhiteSpace(name) ? folder : Path.Combine(folder, name));
@@ -78,7 +78,7 @@ namespace StrangeSoft.WildStar.Archive
                 if (child.Exists)
                 {
                     Debug.WriteLine($"Extracting {child}");
-                    child.ExtractTo(target.FullName);
+                    child.ExtractTo(target.FullName, raw: raw);
                 }
                 else
                 {

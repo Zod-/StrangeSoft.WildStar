@@ -20,7 +20,7 @@ namespace StrangeSoft.WildStar.Archive
 
         public int BlockNumber => _blockNumber;
         public string Name { get; }
-        public abstract void ExtractTo(string folder, string name = null);
+        public abstract void ExtractTo(string folder, string name = null, bool raw = false);
 
         private IArchiveDirectoryEntry Parent => _parent;
 

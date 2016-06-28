@@ -1,13 +1,12 @@
 using System;
+using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Security.Cryptography;
-using SevenZip;
-using SharpCompress.Archive.SevenZip;
-using SharpCompress.Compressor.BZip2;
+using SharpCompress.Archive.Rar;
 using SharpCompress.Compressor.LZMA;
 using SharpCompress.Compressor.PPMd;
 using CompressionMode = System.IO.Compression.CompressionMode;
+using DeflateStream = System.IO.Compression.DeflateStream;
 
 namespace StrangeSoft.WildStar.Archive
 {
@@ -59,11 +58,11 @@ namespace StrangeSoft.WildStar.Archive
         }
 
         public BlockTableEntry TableEntry => Exists ? Assets.LocateArchiveWithAsset(Hash)?.BlockTable[ResourceEntry.BlockIndex] : null;
-        public Stream Open()
+        public Stream Open(bool raw = false)
         {
             if (!Exists) throw new FileNotFoundException();
             if (ExistsInArchive)
-                return ReadBlockData(TableEntry);
+                return ReadBlockData(TableEntry, raw);
             else
             {
                 return File.Open(OnDiskPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -111,34 +110,59 @@ namespace StrangeSoft.WildStar.Archive
             }
         }
 
-        private Stream ReadBlockData(BlockTableEntry fileBlock)
+        private Stream ReadBlockData(BlockTableEntry fileBlock, bool raw = false)
         {
-            var tempFile = GetBlockFileName(Hash);
-            EnsureTempDataExists(fileBlock);
-            var rawDataStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read);
-            if (Deflate)
-                return new DeflateStream(rawDataStream, CompressionMode.Decompress, false);
-            if (Rar)
+            byte[] buffer = new byte[81920];
+            var lengthToCopy = CompressedSize;
+            Stream ret = new MemoryStream();
+
+            // I am. So. Fucking. Dumb. These two lines were in the loop........
+            var stream = Assets.LocateArchiveWithAsset(Hash).BaseStream;
+            stream.Seek(fileBlock.DirectoryOffset, SeekOrigin.Begin);
+            while (lengthToCopy > 0)
             {
-                //rawDataStream.Seek(1, SeekOrigin.Begin);
-                return new LzmaDecodeStream(rawDataStream);
+                var nextBlock = lengthToCopy > buffer.Length ? buffer.Length : (int)lengthToCopy;
+                var bytesRead = stream.Read(buffer, 0, nextBlock);
+                ret.Write(buffer, 0, bytesRead);
+                lengthToCopy -= bytesRead;
             }
-            // TODO: Handle the new format
-            return rawDataStream;
+            ret.Seek(0, SeekOrigin.Begin);
+            if (!raw)
+            {
+                if (Deflate)
+                    ret = new DeflateStream(ret, CompressionMode.Decompress, false);
+                if (Rar)
+                {
+                    byte[] properties = new byte[5];
+                    ret.Read(properties, 0, properties.Length);
+                    // Now only about 16 or so files have failed, need to figure out why. (Still doing the art folder)
+                    ret = new LzmaStream(properties, ret, ret.Length - properties.Length, UncompressedSize, null, false);
+                }
+            }
+            return ret;
         }
 
 
-        public override void ExtractTo(string folder, string fileName = null)
+        public override void ExtractTo(string folder, string fileName = null, bool raw = false)
         {
             if (folder == null) throw new ArgumentNullException(nameof(folder));
             fileName = fileName ?? Name;
-            using (var fileStream = Open())
+            using (var fileStream = Open(raw))
             {
+                if (raw && Rar)
+                {
+                    fileName = fileName + $".{UncompressedSize}.lzma";
+                }
+                else if (raw && Deflate)
+                {
+                    fileName = fileName + $".{UncompressedSize}.z";
+                }
                 var targetFile = Path.Combine(folder, fileName);
                 using (var targetStream = File.Open(targetFile, FileMode.Create, FileAccess.Write))
                 {
-                    fileStream.CopyTo(targetStream);
+                    fileStream.CopyTo(targetStream, 16384);
                 }
+
             }
         }
     }

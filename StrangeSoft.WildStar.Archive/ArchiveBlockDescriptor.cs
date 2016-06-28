@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 
 namespace StrangeSoft.WildStar.Archive

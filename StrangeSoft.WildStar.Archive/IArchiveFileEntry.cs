@@ -9,6 +9,6 @@ namespace StrangeSoft.WildStar.Archive
         long UncompressedSize { get; }
         string Hash { get; }
         
-        Stream Open();
+        Stream Open(bool raw = false);
     }
 }

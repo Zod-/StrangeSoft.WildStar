@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
@@ -71,17 +73,35 @@ namespace LibDebugShim
             //        Console.WriteLine(file);
             //    }
 
+            foreach (var rootDir in assets.RootDirectoryEntries)
+            {
+                ExtractFiles(rootDir, @"D:\WSData");
+                //rootDir.ExtractTo(@"D:\WSData");
+            }
             
             //}
+            List<long> successFileSizes = new List<long>();
+            List<long> failedFileSizes = new List<long>();
+            //foreach (var obj in assets.RootDirectoryEntries.SelectMany(EnumerateFiles).Where(i => i.Name.EndsWith("lua", StringComparison.InvariantCultureIgnoreCase)))
+            //{
+            //    try
+            //    {
+            //        obj.ExtractTo(@"D:\WSData\");
+            //        continue;
+            //    }
+            //    catch(Exception ex)
+            //    {
+            //        failedFileSizes.Add(obj.CompressedSize);
+            //        Console.WriteLine($"Failed to read file: {obj}");
+            //    }
 
-            foreach (var obj in assets.RootDirectoryEntries)
-            {
-                obj.ExtractTo(@"D:\WSData");
-                //if (string.Equals(obj.Name, "Gacha.lua", StringComparison.InvariantCultureIgnoreCase))
-                //{
-                //    Console.WriteLine($"{obj}");
-                //}
-            }
+
+            //    //obj.ExtractTo(@"D:\WSData");
+            //    //if (string.Equals(obj.Name, "Gacha.lua", StringComparison.InvariantCultureIgnoreCase))
+            //    //{
+            //    //    Console.WriteLine($"{obj}");
+            //    //}
+            //}
         }
 
         private static IEnumerable<IArchiveFileEntry> EnumerateFiles(IArchiveDirectoryEntry directoryEntry)
@@ -104,22 +124,51 @@ namespace LibDebugShim
 
         private static void ExtractFiles(IArchiveDirectoryEntry entry, string path)
         {
+            Directory.CreateDirectory(path);
             foreach (var item in entry.Children)
             {
-                if (item is IArchiveDirectoryEntry)
+                try
                 {
-                    var directoryEntry = item as IArchiveDirectoryEntry;
-                    ExtractFiles(directoryEntry, Path.Combine(path, directoryEntry.Name));
-                }
-                else
-                {
-                    var file = item as IArchiveFileEntry;
-                    if (!file.Exists)
+                    
+                    if (item is IArchiveDirectoryEntry)
                     {
-                        Console.WriteLine($"ERROR: Missing file: {file}");
-                        continue;
+                        var directoryEntry = item as IArchiveDirectoryEntry;
+                        ExtractFiles(directoryEntry, Path.Combine(path, directoryEntry.Name));
                     }
-                    Console.WriteLine($"{file}");
+                    else
+                    {
+                        var file = item as IArchiveFileEntry;
+                        if (!file.Exists)
+                        {
+                            Console.WriteLine($"ERROR: Missing file: {file}");
+                            continue;
+                        }
+                        try
+                        {
+                            file.ExtractTo(path, raw: true);
+                        }
+                        catch
+                        {
+                            // Ignored.
+                        }
+                        file.ExtractTo(path);
+                        //Console.WriteLine($"{file}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Failed to extract: {0} due to an exception: {1}", item, ex);
+                    try
+                    {
+                        if (File.Exists(Path.Combine(path, item.Name)))
+                        {
+                            File.Delete(Path.Combine(path, item.Name));
+                        }
+                    }
+                    catch
+                    {
+                        // Ignored.
+                    }
                 }
             }
         }

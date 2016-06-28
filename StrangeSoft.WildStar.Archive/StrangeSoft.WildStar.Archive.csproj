@@ -31,13 +31,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="SevenZipSharp, Version=1.0.5.0, Culture=neutral, PublicKeyToken=c8ff6ba0184838bb, processorArchitecture=MSIL">
-      <HintPath>..\packages\SevenZipSharp.Net45.1.0.5\lib\net45\SevenZipSharp.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="SharpCompress, Version=0.11.6.0, Culture=neutral, PublicKeyToken=beaf6f427e128133, processorArchitecture=MSIL">
-      <HintPath>..\packages\sharpcompress.0.11.6\lib\net40\SharpCompress.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="SharpCompress.Unsigned">
+      <HintPath>..\SharpCompress.Unsigned.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -49,7 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AdvancedArchiveResourceContainerDescriptor.cs" />
+    <Compile Include="AssetArchiveResourceContainerDescriptor.cs" />
     <Compile Include="ArchiveBlockDescriptor.cs" />
     <Compile Include="ArchiveDirectoryEntry.cs" />
     <Compile Include="ArchiveEntry.cs" />
@@ -59,7 +54,7 @@
     <Compile Include="BlockTable.cs" />
     <Compile Include="BlockTableEntry.cs" />
     <Compile Include="FileHeader.cs" />
-    <Compile Include="IndexFile.cs" />
+    <Compile Include="WildstarFile.cs" />
     <Compile Include="IArchiveDirectoryEntry.cs" />
     <Compile Include="IArchiveEntry.cs" />
     <Compile Include="IArchiveFileEntry.cs" />
@@ -67,9 +62,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ResourceContainerTable.cs" />
     <Compile Include="Signatures.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <Compile Include="WildstarAssets.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
