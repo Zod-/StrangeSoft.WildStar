@@ -75,9 +75,13 @@ namespace StrangeSoft.WildStar.Archive
             return Path.Combine(fullPath, Path.ChangeExtension(hash, "tmp"));
         }
 
-        public override string ToString()
+
+        public string ToString(bool includeExtraData = false)
         {
-            return base.ToString() + $" (Flags: {Flags}, Exists: {(Exists ? "Yes" : "No")}, Raw size: {CompressedSize}, Uncompressed Size: {UncompressedSize} AARC Data: {(ResourceEntry == null ? "N/A" : $"Hash: {ResourceEntry.Hash}, Block Number: {ResourceEntry.BlockIndex}, Uncompressed Size: {ResourceEntry.UncompressedSize}")})";
+            if (includeExtraData)
+                return base.ToString() +
+                       $" (Flags: {Flags}, Exists: {(Exists ? "Yes" : "No")}, Raw size: {CompressedSize}, Uncompressed Size: {UncompressedSize} AARC Data: {(ResourceEntry == null ? "N/A" : $"Hash: {ResourceEntry.Hash}, Block Number: {ResourceEntry.BlockIndex}, Uncompressed Size: {ResourceEntry.UncompressedSize}")})";
+            else return base.ToString();
         }
 
         static object fileCreationLock = new object();
@@ -118,13 +122,16 @@ namespace StrangeSoft.WildStar.Archive
 
             // I am. So. Fucking. Dumb. These two lines were in the loop........
             var stream = Assets.LocateArchiveWithAsset(Hash).BaseStream;
-            stream.Seek(fileBlock.DirectoryOffset, SeekOrigin.Begin);
-            while (lengthToCopy > 0)
+            lock (stream)
             {
-                var nextBlock = lengthToCopy > buffer.Length ? buffer.Length : (int)lengthToCopy;
-                var bytesRead = stream.Read(buffer, 0, nextBlock);
-                ret.Write(buffer, 0, bytesRead);
-                lengthToCopy -= bytesRead;
+                stream.Seek(fileBlock.DirectoryOffset, SeekOrigin.Begin);
+                while (lengthToCopy > 0)
+                {
+                    var nextBlock = lengthToCopy > buffer.Length ? buffer.Length : (int)lengthToCopy;
+                    var bytesRead = stream.Read(buffer, 0, nextBlock);
+                    ret.Write(buffer, 0, bytesRead);
+                    lengthToCopy -= bytesRead;
+                }
             }
             ret.Seek(0, SeekOrigin.Begin);
             if (!raw)

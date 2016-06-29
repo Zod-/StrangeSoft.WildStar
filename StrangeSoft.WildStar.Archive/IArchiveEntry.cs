@@ -1,3 +1,5 @@
+using System.Security.Cryptography.X509Certificates;
+
 namespace StrangeSoft.WildStar.Archive
 {
     public interface IArchiveEntry
@@ -6,5 +8,6 @@ namespace StrangeSoft.WildStar.Archive
         string Name { get; }
         void ExtractTo(string folder, string name = null, bool raw = false);
         bool Exists { get; }
+        
     }
 }
