@@ -20,8 +20,11 @@ namespace LibDebugShim
         private const string Target = PublicTestRealm;
         static void Main(string[] args)
         {
-            WildstarAssets liveAssets = new WildstarAssets(new DirectoryInfo(LiveRealms));
-            var publicTestAssets = new WildstarAssets(new DirectoryInfo(PublicTestRealm));
+            ThreadPool.SetMaxThreads(16384, 16384);
+            ThreadPool.SetMinThreads(200, 200);
+            var liveTask = Task.Run(() => new WildstarAssets(new DirectoryInfo(LiveRealms)));
+            var publicTestTask = Task.Run(() => new WildstarAssets(new DirectoryInfo(PublicTestRealm)));
+
             //Console.WriteLine("Index files from patch.index:");
             //foreach (var indexFile in assets.IndexFiles)
             //{
@@ -43,6 +46,8 @@ namespace LibDebugShim
             Func<ArchiveFileEntry, string> createCsvEntry = i => $"{i},{i.Flags},{(i.ExistsOnDisk ? "Disk" : "Archive")},{i.Hash},{i.CompressedSize},{i.UncompressedSize},{i.ArchiveFile?.Name},{i.Reserved1:X16},{i.Reserved2:X16},{i.TableEntry?.DirectoryOffset},{i.TableEntry?.BlockSize}";
             Parallel.Invoke(() =>
             {
+                
+                var publicTestAssets = publicTestTask.GetAwaiter().GetResult();
                 using (
                     var fileStream = File.CreateText($@"D:\WSData\filelist.ptr.{DateTimeOffset.Now:yyyyMMddhhmmss}.txt")
                     )
@@ -61,7 +66,7 @@ namespace LibDebugShim
             },
                 () =>
                 {
-
+                    var liveAssets = liveTask.GetAwaiter().GetResult();
                     using (
                         var fileStream =
                             File.CreateText($@"D:\WSData\filelist.live.{DateTimeOffset.Now:yyyyMMddhhmmss}.txt")
@@ -79,10 +84,10 @@ namespace LibDebugShim
                         }
                     }
                 });
-            foreach (var rootDir in liveAssets.RootDirectoryEntries)
+            foreach (var rootDir in liveTask.GetAwaiter().GetResult().RootDirectoryEntries)
                 ExtractFiles(rootDir, @"D:\WSData\Live");
 
-            foreach (var rootDir in publicTestAssets.RootDirectoryEntries)
+            foreach (var rootDir in publicTestTask.GetAwaiter().GetResult().RootDirectoryEntries)
                 ExtractFiles(rootDir, @"D:\WSData\PTR");
             //        Parallel.ForEach(liveAssets.RootDirectoryEntries,
             //rootDir => ExtractFiles(rootDir, @"D:\WSData\Live"));
@@ -126,7 +131,7 @@ namespace LibDebugShim
             //    //}
             //}
         }
-        private static Semaphore _extractSemaphore = new Semaphore(8, 8);
+        private static readonly Semaphore ExtractSemaphore = new Semaphore(32, 32);
         static List<string> failedFileList = new List<string>();
         static int directoryCount = 0, fileCount = 0, decompressionFailedCount = 0, notFoundCount = 0;
         private static IEnumerable<IArchiveFileEntry> EnumerateFiles(IArchiveDirectoryEntry directoryEntry)
@@ -162,7 +167,7 @@ namespace LibDebugShim
                 {
                     try
                     {
-                        _extractSemaphore.WaitOne();
+                        ExtractSemaphore.WaitOne();
                         try
                         {
                             Interlocked.Increment(ref fileCount);
@@ -179,7 +184,7 @@ namespace LibDebugShim
                         }
                         finally
                         {
-                            _extractSemaphore.Release();
+                            ExtractSemaphore.Release();
                         }
                         //Console.WriteLine($"{file}");
                     }
