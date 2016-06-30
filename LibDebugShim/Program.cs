@@ -39,58 +39,65 @@ namespace LibDebugShim
             //{
             //    Console.WriteLine(file);
             //}
-            //using(var fileStream = File.CreateText($@"D:\WSData\filelist.{$"{(Target == PublicTestRealm ? "ptr." : "")}{DateTimeOffset.Now:yyyyMMddhhmmss}"}.txt"))
-            //foreach (var entry in assets.RootDirectoryEntries.SelectMany(EnumerateFiles).OfType<ArchiveFileEntry>().Select(i => $"{i} - {i.Flags} - {(i.ExistsOnDisk ? "Disk" : "Archive")} : {i.Hash}"))
-            //{
-            //    fileStream.WriteLine(entry);
-            //}
 
-            //using (
-            //    var indexFile =
-            //        IndexFile.Create(
-            //            new FileInfo(@"C:\Program Files (x86)\Steam\steamapps\common\WildStar\Patch\clientdata.index"), new FileInfo(@"C:\Program Files (x86)\Steam\steamapps\common\WildStar\Patch\clientdata.archive")))
-            //{
-            //    DateTimeOffset start = DateTimeOffset.Now;
-            //    //var allDirectories = GetAllDirectories(indexFile.RootDirectory).ToList();
-            //    //var taken = DateTimeOffset.Now - start;
-            //    //Console.WriteLine("Reading all data took: {0}", taken);
-
-            //    //Console.WriteLine("Found the following directories: ");
-            //    //foreach (var directory in allDirectories)
-            //    //{
-            //    //    Console.WriteLine(directory);
-            //    //}
-
-
-            //    //Console.WriteLine("Found the following files: ");
-            //    //foreach (var file in GetAllFiles(indexFile.RootDirectory))
-            //    //{
-            //    //    Console.WriteLine(file);
-            //    //}
-
-            //var allFiles = EnumerateFiles(indexFile.RootDirectory).ToList();
-            //    var foundCount = allFiles.Count(i => i.Exists);
-            //    var notFoundCount = allFiles.Count(i => !i.Exists);
-            //    var byHash = allFiles.OrderByDescending(i => i.Hash).TakeWhile(i => i.Exists).ToList();
-            //    var byExtension = allFiles.Where(i => i.Exists).GroupBy(i => Path.GetExtension(i.Name)).OrderByDescending(i => i.Count()).ToList();
-            //    var byBlock = allFiles.OrderBy(i => i.BlockNumber).TakeWhile(i => i.Exists).ToList();
-            //    var bySize = allFiles.OrderByDescending(i => i.UncompressedSize).TakeWhile(i => i.Exists).ToList();
-            //    var byCompressedSize = allFiles.OrderByDescending(i => i.CompressedSize).TakeWhile(i => i.Exists).ToList();
-
-            //    foreach (var file in byHash)
-            //    {
-            //        Console.WriteLine(file);
-            //    }
-
-            foreach (var rootDir in liveAssets.RootDirectoryEntries)
+            Func<ArchiveFileEntry, string> createCsvEntry = i => $"{i},{i.Flags},{(i.ExistsOnDisk ? "Disk" : "Archive")},{i.Hash},{i.CompressedSize},{i.UncompressedSize},{i.ArchiveFile?.Name},{i.Reserved1:X16},{i.Reserved2:X16},{i.TableEntry?.DirectoryOffset},{i.TableEntry?.BlockSize}";
+            Parallel.Invoke(() =>
             {
-                ExtractFiles(rootDir, @"D:\WSData\Live");
-            }
+                using (
+                    var fileStream = File.CreateText($@"D:\WSData\filelist.ptr.{DateTimeOffset.Now:yyyyMMddhhmmss}.txt")
+                    )
+                {
+                    fileStream.WriteLine(
+                        "Path,Flags,LocationType,Hash,CompressedSize,UncompressedSize,ArchiveName,Reserved1,Reserved2,DirectoryOffset,BlockSize");
+                    foreach (
+                        var entry in
+                            publicTestAssets.RootDirectoryEntries.SelectMany(EnumerateFiles)
+                                .OfType<ArchiveFileEntry>()
+                                .Select(i => createCsvEntry(i)))
+                    {
+                        fileStream.WriteLine(entry);
+                    }
+                }
+            },
+                () =>
+                {
 
-            foreach (var rootDir in publicTestAssets.RootDirectoryEntries)
-            {
-                ExtractFiles(rootDir, @"D:\WSData\PTR");
-            }
+                    using (
+                        var fileStream =
+                            File.CreateText($@"D:\WSData\filelist.live.{DateTimeOffset.Now:yyyyMMddhhmmss}.txt")
+                        )
+                    {
+                        fileStream.WriteLine(
+                            "Path,Flags,LocationType,Hash,CompressedSize,UncompressedSize,ArchiveName,Reserved1,Reserved2,DirectoryOffset,BlockSize");
+                        foreach (
+                            var entry in
+                                liveAssets.RootDirectoryEntries.SelectMany(EnumerateFiles)
+                                    .OfType<ArchiveFileEntry>()
+                                    .Select(i => createCsvEntry(i)))
+                        {
+                            fileStream.WriteLine(entry);
+                        }
+                    }
+                });
+            Parallel.Invoke(
+                () =>
+                {
+                    Parallel.ForEach(liveAssets.RootDirectoryEntries,
+                        rootDir => ExtractFiles(rootDir, @"D:\WSData\Live"));
+                    //foreach (var rootDir in liveAssets.RootDirectoryEntries)
+                    //{
+                    //    ExtractFiles(rootDir, @"D:\WSData\Live");
+                    //}
+                },
+                () =>
+                {
+                    Parallel.ForEach(publicTestAssets.RootDirectoryEntries,
+                        rootDir => ExtractFiles(rootDir, @"D:\WSData\PTR"));
+                    //foreach (var rootDir in publicTestAssets.RootDirectoryEntries)
+                    //{
+                    //    ExtractFiles(rootDir, @"D:\WSData\PTR");
+                    //}
+                });
 
 
             //Parallel.ForEach(assets.RootDirectoryEntries, rootDir =>
@@ -129,7 +136,7 @@ namespace LibDebugShim
             //    //}
             //}
         }
-        private static Semaphore _extractSemaphore = new Semaphore(8, 8);
+        private static Semaphore _extractSemaphore = new Semaphore(16, 16);
         static List<string> failedFileList = new List<string>();
         static int directoryCount = 0, fileCount = 0, decompressionFailedCount = 0, notFoundCount = 0;
         private static IEnumerable<IArchiveFileEntry> EnumerateFiles(IArchiveDirectoryEntry directoryEntry)
@@ -150,38 +157,33 @@ namespace LibDebugShim
             }
         }
 
-
         private static void ExtractFiles(IArchiveDirectoryEntry entry, string path)
         {
+            Console.WriteLine($"Scanning {entry}");
             Interlocked.Increment(ref directoryCount);
             Directory.CreateDirectory(path);
-            foreach(var item in entry.Children) { 
-                try
+            var children = entry.Children.ToList();
+            var directories = children.OfType<IArchiveDirectoryEntry>();
+            // ISSUE: Interface needs to be expanded so we don't need the actual class.
+            var files = children.OfType<ArchiveFileEntry>();
+            Parallel.Invoke(() =>
+            {
+                Parallel.ForEach(files, file =>
                 {
-
-                    if (item is IArchiveDirectoryEntry)
-                    {
-                        var directoryEntry = item as IArchiveDirectoryEntry;
-                        ExtractFiles(directoryEntry, Path.Combine(path, directoryEntry.Name));
-                    }
-                    else
+                    try
                     {
                         _extractSemaphore.WaitOne();
                         try
                         {
                             Interlocked.Increment(ref fileCount);
-                            var file = item as ArchiveFileEntry;
 
-                            Debug.Assert(file != null, "file != null");
+
                             if (file.ExistsOnDisk)
-                                continue;
-                            Console.WriteLine("Extracting {0} from file {1}, path: {2}", file.Name, file.ArchiveFile.Name, file.Parent);
+                                return;
                             if (!file.Exists)
                             {
                                 Interlocked.Increment(ref notFoundCount);
-                                notFoundCount++;
-                                Console.WriteLine($"ERROR: Missing file: {file}");
-                                continue;
+                                return;
                             }
                             file.ExtractTo(path);
                         }
@@ -191,26 +193,35 @@ namespace LibDebugShim
                         }
                         //Console.WriteLine($"{file}");
                     }
-                }
-                catch (Exception ex)
-                {
-                    Interlocked.Increment(ref decompressionFailedCount);
-                    lock(failedFileList)
-                    failedFileList.Add(item.ToString());
-                    //Console.WriteLine("Failed to extract: {0} due to an exception: {1}", item, ex);
-                    try
+                    catch (Exception ex)
                     {
-                        if (File.Exists(Path.Combine(path, item.Name)))
+                        Interlocked.Increment(ref decompressionFailedCount);
+                        lock (failedFileList)
+                            failedFileList.Add(file.ToString());
+                        //Console.WriteLine("Failed to extract: {0} due to an exception: {1}", item, ex);
+                        try
                         {
-                            File.Delete(Path.Combine(path, item.Name));
+                            if (File.Exists(Path.Combine(path, file.Name)))
+                            {
+                                File.Delete(Path.Combine(path, file.Name));
+                            }
+                        }
+                        catch
+                        {
+                            // Ignored.
                         }
                     }
-                    catch
-                    {
-                        // Ignored.
-                    }
-                }
-            }
+                });
+            }, () =>
+            {
+                Parallel.ForEach(directories, directoryEntry =>
+                {
+                    //foreach (var directoryEntry in directories)
+                    //{
+                    ExtractFiles(directoryEntry, Path.Combine(path, directoryEntry.Name));
+                    //}
+                });
+            });
         }
 
         private static IEnumerable<IArchiveFileEntry> GetAllFiles(IArchiveDirectoryEntry directoryEntry)
@@ -228,7 +239,6 @@ namespace LibDebugShim
                     yield return innerEntry;
                 }
             }
-
         }
 
         private static IEnumerable<IArchiveDirectoryEntry> GetAllDirectories(IArchiveDirectoryEntry rootDirectory)

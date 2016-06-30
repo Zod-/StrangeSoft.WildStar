@@ -103,7 +103,6 @@ namespace StrangeSoft.WildStar.Archive
 
         private Stream ReadBlockData(BlockTableEntry fileBlock, bool raw = false)
         {
-            Debug.WriteLine($"Located {Name} in {ArchiveFile.Name}");
             var ret = (Stream)SourceFile.CreateViewStream(fileBlock.DirectoryOffset, fileBlock.BlockSize, MemoryMappedFileAccess.Read);
             if (!raw)
             {
@@ -112,7 +111,9 @@ namespace StrangeSoft.WildStar.Archive
                 if (Rar)
                 {
                     byte[] properties = new byte[5];
+                    ret = new BufferedStream(ret, 16777216);
                     ret.Read(properties, 0, properties.Length);
+                    
                     ret = new LzmaStream(properties, ret, ret.Length - properties.Length, UncompressedSize, null, false);
                 }
             }
@@ -137,7 +138,7 @@ namespace StrangeSoft.WildStar.Archive
                 var targetFile = Path.Combine(folder, fileName);
                 using (var targetStream = File.Open(targetFile, FileMode.Create, FileAccess.Write))
                 {
-                    fileStream.CopyTo(targetStream, 16384);
+                    fileStream.CopyTo(targetStream, 16777216);
                 }
 
             }
