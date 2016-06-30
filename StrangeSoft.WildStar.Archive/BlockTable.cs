@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 
 namespace StrangeSoft.WildStar.Archive
@@ -13,21 +15,29 @@ namespace StrangeSoft.WildStar.Archive
             _blockTableEntries = blockTableEntries.ToList();
         }
 
-        public static BlockTable Load(BinaryReader binaryReader, int directoryCountOffset = 544, int directoryStartOffset = 536)
+        public static BlockTable Load(WildstarFile file, int directoryCountOffset = 544, int directoryStartOffset = 536)
         {
             List<BlockTableEntry> tableEntries = new List<BlockTableEntry>();
-            var initialPosition = binaryReader.BaseStream.Position;
-            binaryReader.BaseStream.Seek(directoryCountOffset, SeekOrigin.Begin);
-            var directoryCount = binaryReader.ReadInt32();
-            binaryReader.BaseStream.Seek(directoryStartOffset, SeekOrigin.Begin);
-            var directoryStart = binaryReader.ReadInt64();
-            binaryReader.BaseStream.Seek(directoryStart, SeekOrigin.Begin);
-            for (var x = 0; x < directoryCount; x++)
+            var startPos = Math.Min(directoryCountOffset, directoryStartOffset);
+            var endPos = Math.Max(directoryCountOffset + 4, directoryStartOffset + 8);
+            int directoryCount;
+            long directoryStart;
+            var countOffset = directoryCountOffset - startPos;
+            var startOffset = directoryStartOffset - startPos;
+            using (var blockTableDataStream = file.File.CreateViewStream(startPos, endPos - startPos + 1, MemoryMappedFileAccess.Read))
+            using (var binaryReader = new BinaryReader(blockTableDataStream))
             {
-                tableEntries.Add(BlockTableEntry.FromReader(binaryReader));
+                binaryReader.BaseStream.Seek(startOffset, SeekOrigin.Begin);
+                directoryStart = binaryReader.ReadInt64();
+                binaryReader.BaseStream.Seek(countOffset, SeekOrigin.Begin);
+                directoryCount = binaryReader.ReadInt32();
             }
-
-            binaryReader.BaseStream.Seek(initialPosition, SeekOrigin.Begin);
+            using (var directoryEntryStream = file.File.CreateViewStream(directoryStart, directoryCount * BlockTableEntry.Size, MemoryMappedFileAccess.Read))
+            using (var binaryReader = new BinaryReader(directoryEntryStream))
+                for (var x = 0; x < directoryCount; x++)
+                {
+                    tableEntries.Add(BlockTableEntry.FromReader(binaryReader));
+                }
 
             return new BlockTable(tableEntries);
         }

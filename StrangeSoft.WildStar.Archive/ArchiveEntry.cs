@@ -2,16 +2,15 @@ namespace StrangeSoft.WildStar.Archive
 {
     public abstract class ArchiveEntry : IArchiveEntry
     {
-        private readonly IArchiveDirectoryEntry _parent;
         private readonly int _blockNumber;
-        protected WildstarFile Index { get; }
+        public WildstarFile IndexFile { get; }
         public long ParentIndex { get; }
 
         protected ArchiveEntry(WildstarFile indexFile, WildstarAssets assets, IArchiveDirectoryEntry parent, int blockNumber, string name)
         {
-            _parent = parent;
+            Parent = parent;
             _blockNumber = blockNumber;
-            Index = indexFile;
+            IndexFile = indexFile;
             Assets = assets;
             Name = name;
         }
@@ -22,11 +21,11 @@ namespace StrangeSoft.WildStar.Archive
         public string Name { get; }
         public abstract void ExtractTo(string folder, string name = null, bool raw = false);
 
-        private IArchiveDirectoryEntry Parent => _parent;
+        public IArchiveDirectoryEntry Parent { get; }
 
         protected long Offset => (long)BlockTableEntry.DirectoryOffset;
         protected long Size => (long)BlockTableEntry.BlockSize;
-        protected BlockTableEntry BlockTableEntry => Index.BlockTable[_blockNumber];
+        protected BlockTableEntry BlockTableEntry => IndexFile.BlockTable[_blockNumber];
         public abstract bool Exists { get; }
         public override string ToString()
         {

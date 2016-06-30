@@ -4,6 +4,7 @@ namespace StrangeSoft.WildStar.Archive
 {
     public class BlockTableEntry
     {
+        public const long Size = sizeof (long) + sizeof (long);
         public long DirectoryOffset { get; set; }
         public long BlockSize { get; set; }
 

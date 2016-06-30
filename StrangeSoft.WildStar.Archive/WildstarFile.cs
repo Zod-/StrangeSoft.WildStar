@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 
 namespace StrangeSoft.WildStar.Archive
@@ -12,24 +13,30 @@ namespace StrangeSoft.WildStar.Archive
         private Lazy<IReadOnlyList<ArchiveBlockDescriptor>> _lazyArchiveBlockDescriptors;
         private Lazy<ResourceContainerTable> _lazyAssetTable;
         public FileHeader FileHeader { get; }
-
-        public BinaryReader BaseReader => _binaryReader;
-        public Stream BaseStream => _binaryReader.BaseStream;
+        public MemoryMappedFile File { get; }
 
         public string Name { get; }
 
-        public WildstarFile(FileInfo file) : this(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite), Path.GetFileNameWithoutExtension(file.Name)) { }
-        public WildstarFile(Stream stream, string name) : this(new BinaryReader(stream), name) { }
-        public WildstarFile(BinaryReader reader, string name)
+        public WildstarFile(FileInfo file) : this(MemoryMappedFile.CreateFromFile(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite), null, 0, MemoryMappedFileAccess.Read, HandleInheritability.Inheritable, false), Path.GetFileNameWithoutExtension(file.Name)) { }
+
+        public WildstarFile(MemoryMappedFile file, string name)
         {
+            File = file;
             Name = name;
-            _binaryReader = reader;
-            _binaryReader.BaseStream.Seek(0, SeekOrigin.Begin);
-            FileHeader = FileHeader.Load(_binaryReader);
-            if (FileHeader.Magic != Signatures.Pack) throw new InvalidDataException("The file signature does not match the expected signature, the file is not valid.");
-            if (FileHeader.Version != 1) throw new InvalidOperationException($"This library only supports version 0x{1:X8}, but the file appears to be version 0x{FileHeader.Version:X8}");
-            BlockTable = BlockTable.Load(_binaryReader);
-            _lazyArchiveBlockDescriptors = new Lazy<IReadOnlyList<ArchiveBlockDescriptor>>(() => GetDescriptors(BlockTable, _binaryReader).ToList().AsReadOnly());
+            using (var mappedStream = file.CreateViewStream(0, FileHeader.Size, MemoryMappedFileAccess.Read))
+            using (var binaryReader = new BinaryReader(mappedStream))
+            {
+                FileHeader = FileHeader.Load(binaryReader);
+
+                if (FileHeader.Magic != Signatures.Pack)
+                    throw new InvalidDataException(
+                        "The file signature does not match the expected signature, the file is not valid.");
+                if (FileHeader.Version != 1)
+                    throw new InvalidOperationException(
+                        $"This library only supports version 0x{1:X8}, but the file appears to be version 0x{FileHeader.Version:X8}");
+            }
+            BlockTable = BlockTable.Load(this);
+            _lazyArchiveBlockDescriptors = new Lazy<IReadOnlyList<ArchiveBlockDescriptor>>(() => GetDescriptors(BlockTable).ToList().AsReadOnly());
             _lazyAssetTable = new Lazy<ResourceContainerTable>(() => AssetArchiveResourceContainerDescriptor == null ? null : new ResourceContainerTable(AssetArchiveResourceContainerDescriptor, this));
         }
 
@@ -39,14 +46,19 @@ namespace StrangeSoft.WildStar.Archive
         public ResourceContainerTable AssetResourceTable => _lazyAssetTable.Value;
 
 
-        private IEnumerable<ArchiveBlockDescriptor> GetDescriptors(BlockTable blockTable, BinaryReader binaryReader)
+        private IEnumerable<ArchiveBlockDescriptor> GetDescriptors(BlockTable blockTable)
         {
+
             foreach (var entry in blockTable)
             {
-                binaryReader.BaseStream.Seek(entry.DirectoryOffset, SeekOrigin.Begin);
-                var magic = binaryReader.ReadUInt32();
-                var blockDescriptor = ArchiveBlockDescriptor.Create(magic, binaryReader);
-                if (blockDescriptor != null) yield return blockDescriptor;
+                if (entry.BlockSize == 0) continue;
+                using (var mappedStream = File.CreateViewStream(entry.DirectoryOffset, entry.BlockSize, MemoryMappedFileAccess.Read))
+                using (var binaryReader = new BinaryReader(mappedStream))
+                {
+                    var magic = binaryReader.ReadUInt32();
+                    var blockDescriptor = ArchiveBlockDescriptor.Create(magic, binaryReader);
+                    if (blockDescriptor != null) yield return blockDescriptor;
+                }
             }
         }
 

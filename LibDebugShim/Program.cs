@@ -15,10 +15,13 @@ namespace LibDebugShim
 {
     class Program
     {
+        private const string PublicTestRealm = @"C:\Program Files (x86)\NCSOFT\WildStarPTR";
+        private const string LiveRealms = @"C:\Program Files (x86)\Steam\steamapps\common\WildStar";
+        private const string Target = PublicTestRealm;
         static void Main(string[] args)
         {
             WildstarAssets assets =
-                new WildstarAssets(new DirectoryInfo(@"C:\Program Files (x86)\Steam\steamapps\common\WildStar"));
+                new WildstarAssets(new DirectoryInfo(Target));
             //Console.WriteLine("Index files from patch.index:");
             //foreach (var indexFile in assets.IndexFiles)
             //{
@@ -36,11 +39,11 @@ namespace LibDebugShim
             //{
             //    Console.WriteLine(file);
             //}
-            using(var fileStream = File.CreateText($@"D:\WSData\filelist.{DateTimeOffset.Now:yyyyMMddhhmmss}.txt"))
-            foreach (var entry in assets.RootDirectoryEntries.SelectMany(EnumerateFiles).OfType<ArchiveFileEntry>().Select(i => $"{i} - {i.Flags} - {(i.ExistsOnDisk ? "Disk" : "Archive")} : {i.Hash}"))
-            {
-                fileStream.WriteLine(entry);
-            }
+            //using(var fileStream = File.CreateText($@"D:\WSData\filelist.{$"{(Target == PublicTestRealm ? "ptr." : "")}{DateTimeOffset.Now:yyyyMMddhhmmss}"}.txt"))
+            //foreach (var entry in assets.RootDirectoryEntries.SelectMany(EnumerateFiles).OfType<ArchiveFileEntry>().Select(i => $"{i} - {i.Flags} - {(i.ExistsOnDisk ? "Disk" : "Archive")} : {i.Hash}"))
+            //{
+            //    fileStream.WriteLine(entry);
+            //}
 
             //using (
             //    var indexFile =
@@ -64,7 +67,7 @@ namespace LibDebugShim
             //    //{
             //    //    Console.WriteLine(file);
             //    //}
-            
+
             //var allFiles = EnumerateFiles(indexFile.RootDirectory).ToList();
             //    var foundCount = allFiles.Count(i => i.Exists);
             //    var notFoundCount = allFiles.Count(i => !i.Exists);
@@ -80,14 +83,12 @@ namespace LibDebugShim
             //    }
 
 
-            
-            
-            //foreach (var rootDir in assets.RootDirectoryEntries)
-            //{
-            //    ExtractFiles(rootDir, @"D:\WSData");
-            //    //rootDir.ExtractTo(@"D:\WSData");
-            //}
-            
+            Parallel.ForEach(assets.RootDirectoryEntries, rootDir =>
+            {
+                
+                ExtractFiles(rootDir, @"D:\WSData");
+            });
+
             //Console.WriteLine($"Found {directoryCount} directories, {fileCount} files. {decompressionFailedCount} files failed to decompress and {notFoundCount} files could not be located in the archive or on the filesystem.");
             //Console.WriteLine("Failed file listing");
             //foreach (var name in failedFileList)

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Security.Cryptography;
 using SharpCompress.Archive.Rar;
 using SharpCompress.Compressor.LZMA;
@@ -38,11 +40,25 @@ namespace StrangeSoft.WildStar.Archive
         public bool ExistsInArchive => ResourceEntry != null;
         public bool ExistsOnDisk => DoesThisExistOnDisk();
 
-        private string OnDiskPath => Path.Combine(Assets.BaseDirectory.FullName, Index.Name, Name);
+        public string OnDiskPath => Path.Combine(GetPathComponents());
+
+        private string[] GetPathComponents()
+        {
+            List<string> ret = new List<string>
+            {
+                Assets.BaseDirectory.FullName,
+                IndexFile.Name
+            };
+
+            ret.AddRange(Parent.ToString().Split(new[] {'/'}, StringSplitOptions.RemoveEmptyEntries));
+
+            ret.Add(Name);
+            return ret.ToArray();
+        }
 
         private bool DoesThisExistOnDisk()
         {
-            var directoryInfo = new DirectoryInfo(Path.Combine(Assets.BaseDirectory.FullName, Index.Name));
+            var directoryInfo = new DirectoryInfo(Path.Combine(Assets.BaseDirectory.FullName, IndexFile.Name));
             if (!directoryInfo.Exists) return false;
             var fileInfo = new FileInfo(OnDiskPath);
             if (!fileInfo.Exists) return false;
@@ -87,53 +103,14 @@ namespace StrangeSoft.WildStar.Archive
         static object fileCreationLock = new object();
         static Guid sessionId = Guid.NewGuid();
 
-        private void EnsureTempDataExists(BlockTableEntry fileBlock)
-        {
-            var tempFile = GetBlockFileName(Hash);
-            if (!File.Exists(tempFile))
-            {
-                lock (fileCreationLock)
-                {
-                    if (!File.Exists(tempFile))
-                        using (var fileStream = File.Open(tempFile, FileMode.Create))
-                        {
-                            var stream = Assets.LocateArchiveWithAsset(Hash).BaseStream;
-                            stream.Seek(fileBlock.DirectoryOffset, SeekOrigin.Begin);
-                            byte[] buffer = new byte[16384];
-                            var bytesToRead = fileBlock.BlockSize;
-
-                            while (bytesToRead > 0)
-                            {
-                                var read = stream.Read(buffer, 0, buffer.Length > bytesToRead ? (int)bytesToRead : buffer.Length);
-                                if (read == 0) throw new EndOfStreamException("Unexpected end of stream");
-                                fileStream.Write(buffer, 0, read);
-                                bytesToRead -= read;
-                            }
-                        }
-                }
-            }
-        }
 
         private Stream ReadBlockData(BlockTableEntry fileBlock, bool raw = false)
         {
             byte[] buffer = new byte[81920];
             var lengthToCopy = CompressedSize;
-            Stream ret = new MemoryStream();
 
-            // I am. So. Fucking. Dumb. These two lines were in the loop........
-            var stream = Assets.LocateArchiveWithAsset(Hash).BaseStream;
-            lock (stream)
-            {
-                stream.Seek(fileBlock.DirectoryOffset, SeekOrigin.Begin);
-                while (lengthToCopy > 0)
-                {
-                    var nextBlock = lengthToCopy > buffer.Length ? buffer.Length : (int)lengthToCopy;
-                    var bytesRead = stream.Read(buffer, 0, nextBlock);
-                    ret.Write(buffer, 0, bytesRead);
-                    lengthToCopy -= bytesRead;
-                }
-            }
-            ret.Seek(0, SeekOrigin.Begin);
+            
+            var ret = (Stream)Assets.LocateArchiveWithAsset(Hash).File.CreateViewStream(fileBlock.DirectoryOffset, fileBlock.BlockSize, MemoryMappedFileAccess.Read);
             if (!raw)
             {
                 if (Deflate)
@@ -142,7 +119,6 @@ namespace StrangeSoft.WildStar.Archive
                 {
                     byte[] properties = new byte[5];
                     ret.Read(properties, 0, properties.Length);
-                    // Now only about 16 or so files have failed, need to figure out why. (Still doing the art folder)
                     ret = new LzmaStream(properties, ret, ret.Length - properties.Length, UncompressedSize, null, false);
                 }
             }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Text;
 
 namespace StrangeSoft.WildStar.Archive
@@ -23,19 +24,20 @@ namespace StrangeSoft.WildStar.Archive
 
         private List<IArchiveEntry> ReadChildren()
         {
-            lock (Index.BaseStream)
+            List<IArchiveEntry> children = new List<IArchiveEntry>();
+            int directoryCount;
+            int fileCount;
+            using (var headerStream = IndexFile.File.CreateViewStream(Offset, Size, MemoryMappedFileAccess.Read))
+            using (var binaryReader = new BinaryReader(headerStream))
             {
-                List<IArchiveEntry> children = new List<IArchiveEntry>();
-                var binaryReader = Index.BaseReader;
-                Index.BaseStream.Seek(Offset, SeekOrigin.Begin);
-                var directoryCount = binaryReader.ReadUInt32();
-                var fileCount = binaryReader.ReadUInt32();
+                directoryCount = binaryReader.ReadInt32();
+                fileCount = binaryReader.ReadInt32();
+
                 var dataSize = (directoryCount * directorySize) + (fileCount * fileSize);
-                var stringSize = BlockTableEntry.BlockSize - 8 - dataSize;
-                var currentPosition = Index.BaseStream.Position;
-                Index.BaseStream.Seek(dataSize, SeekOrigin.Current);
+                var stringSize = Size - 8 - dataSize;
+                headerStream.Seek(dataSize, SeekOrigin.Current);
                 byte[] nameData = binaryReader.ReadBytes((int)stringSize);
-                Index.BaseStream.Seek(currentPosition, SeekOrigin.Begin);
+                headerStream.Seek(8, SeekOrigin.Begin);
 
 
                 for (var x = 0; x < directoryCount; x++)
@@ -43,17 +45,17 @@ namespace StrangeSoft.WildStar.Archive
                     var nameOffset = binaryReader.ReadInt32();
                     var nextBlock = binaryReader.ReadInt32();
                     var name = ReadCString(nameData, nameOffset);
-                    children.Add(new ArchiveDirectoryEntry(Index, Assets, this, nextBlock, name));
+                    children.Add(new ArchiveDirectoryEntry(IndexFile, Assets, this, nextBlock, name));
                 }
 
                 for (var x = 0; x < fileCount; x++)
                 {
                     var nameOffset = binaryReader.ReadInt32();
                     var name = ReadCString(nameData, nameOffset);
-                    children.Add(new ArchiveFileEntry(Index, Assets, this, BlockNumber, name, binaryReader));
+                    children.Add(new ArchiveFileEntry(IndexFile, Assets, this, BlockNumber, name, binaryReader));
                 }
-                return children;
             }
+            return children;
         }
 
         private string ReadCString(byte[] data, int offset)

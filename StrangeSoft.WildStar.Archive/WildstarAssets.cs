@@ -77,10 +77,10 @@ namespace StrangeSoft.WildStar.Archive
 
         private WildstarFile GetFile(ArchiveFileEntry fileName, bool required = false)
         {
-            if (!fileName.Exists)
+            if (!fileName.ExistsOnDisk)
                 if (required) throw new FileNotFoundException();
                 else return null;
-            return new WildstarFile(fileName.Open(), Path.GetFileNameWithoutExtension(fileName.Name));
+            return new WildstarFile(new FileInfo(fileName.OnDiskPath));
         }
 
         public WildstarFile LocateArchiveWithAsset(string hash)

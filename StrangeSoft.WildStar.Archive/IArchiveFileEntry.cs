@@ -8,7 +8,7 @@ namespace StrangeSoft.WildStar.Archive
         long CompressedSize { get; }
         long UncompressedSize { get; }
         string Hash { get; }
-        
+        string OnDiskPath { get; }
         Stream Open(bool raw = false);
     }
 }
