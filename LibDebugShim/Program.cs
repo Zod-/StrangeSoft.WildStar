@@ -79,25 +79,15 @@ namespace LibDebugShim
                         }
                     }
                 });
-            Parallel.Invoke(
-                () =>
-                {
-                    Parallel.ForEach(liveAssets.RootDirectoryEntries,
-                        rootDir => ExtractFiles(rootDir, @"D:\WSData\Live"));
-                    //foreach (var rootDir in liveAssets.RootDirectoryEntries)
-                    //{
-                    //    ExtractFiles(rootDir, @"D:\WSData\Live");
-                    //}
-                },
-                () =>
-                {
-                    Parallel.ForEach(publicTestAssets.RootDirectoryEntries,
-                        rootDir => ExtractFiles(rootDir, @"D:\WSData\PTR"));
-                    //foreach (var rootDir in publicTestAssets.RootDirectoryEntries)
-                    //{
-                    //    ExtractFiles(rootDir, @"D:\WSData\PTR");
-                    //}
-                });
+            foreach (var rootDir in liveAssets.RootDirectoryEntries)
+                ExtractFiles(rootDir, @"D:\WSData\Live");
+
+            foreach (var rootDir in publicTestAssets.RootDirectoryEntries)
+                ExtractFiles(rootDir, @"D:\WSData\PTR");
+            //        Parallel.ForEach(liveAssets.RootDirectoryEntries,
+            //rootDir => ExtractFiles(rootDir, @"D:\WSData\Live"));
+            //Parallel.ForEach(publicTestAssets.RootDirectoryEntries,
+            //            rootDir => ExtractFiles(rootDir, @"D:\WSData\PTR"));
 
 
             //Parallel.ForEach(assets.RootDirectoryEntries, rootDir =>
@@ -136,7 +126,7 @@ namespace LibDebugShim
             //    //}
             //}
         }
-        private static Semaphore _extractSemaphore = new Semaphore(16, 16);
+        private static Semaphore _extractSemaphore = new Semaphore(8, 8);
         static List<string> failedFileList = new List<string>();
         static int directoryCount = 0, fileCount = 0, decompressionFailedCount = 0, notFoundCount = 0;
         private static IEnumerable<IArchiveFileEntry> EnumerateFiles(IArchiveDirectoryEntry directoryEntry)
