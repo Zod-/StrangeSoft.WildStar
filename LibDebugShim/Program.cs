@@ -20,8 +20,8 @@ namespace LibDebugShim
         private const string Target = PublicTestRealm;
         static void Main(string[] args)
         {
-            WildstarAssets assets =
-                new WildstarAssets(new DirectoryInfo(Target));
+            WildstarAssets liveAssets = new WildstarAssets(new DirectoryInfo(LiveRealms));
+            var publicTestAssets = new WildstarAssets(new DirectoryInfo(PublicTestRealm));
             //Console.WriteLine("Index files from patch.index:");
             //foreach (var indexFile in assets.IndexFiles)
             //{
@@ -82,12 +82,21 @@ namespace LibDebugShim
             //        Console.WriteLine(file);
             //    }
 
-
-            Parallel.ForEach(assets.RootDirectoryEntries, rootDir =>
+            foreach (var rootDir in liveAssets.RootDirectoryEntries)
             {
-                
-                ExtractFiles(rootDir, @"D:\WSData");
-            });
+                ExtractFiles(rootDir, @"D:\WSData\Live");
+            }
+
+            foreach (var rootDir in publicTestAssets.RootDirectoryEntries)
+            {
+                ExtractFiles(rootDir, @"D:\WSData\PTR");
+            }
+
+
+            //Parallel.ForEach(assets.RootDirectoryEntries, rootDir =>
+            //{
+            //    ExtractFiles(rootDir, @"D:\WSData");
+            //});
 
             //Console.WriteLine($"Found {directoryCount} directories, {fileCount} files. {decompressionFailedCount} files failed to decompress and {notFoundCount} files could not be located in the archive or on the filesystem.");
             //Console.WriteLine("Failed file listing");
@@ -146,8 +155,7 @@ namespace LibDebugShim
         {
             Interlocked.Increment(ref directoryCount);
             Directory.CreateDirectory(path);
-            Parallel.ForEach(entry.Children, (item, parallelLoopState) =>
-            {
+            foreach(var item in entry.Children) { 
                 try
                 {
 
@@ -162,26 +170,18 @@ namespace LibDebugShim
                         try
                         {
                             Interlocked.Increment(ref fileCount);
-                            var file = item as IArchiveFileEntry;
+                            var file = item as ArchiveFileEntry;
 
-                            Console.CursorLeft = 0;
-                            Console.CursorTop = 0;
                             Debug.Assert(file != null, "file != null");
-                            //Console.Write($"{file.Name}                                 \n                                                           \n                                       ");
+                            if (file.ExistsOnDisk)
+                                continue;
+                            Console.WriteLine("Extracting {0} from file {1}, path: {2}", file.Name, file.ArchiveFile.Name, file.Parent);
                             if (!file.Exists)
                             {
                                 Interlocked.Increment(ref notFoundCount);
                                 notFoundCount++;
                                 Console.WriteLine($"ERROR: Missing file: {file}");
-                                return;
-                            }
-                            try
-                            {
-                                file.ExtractTo(path, raw: true);
-                            }
-                            catch
-                            {
-                                // Ignored.
+                                continue;
                             }
                             file.ExtractTo(path);
                         }
@@ -210,7 +210,7 @@ namespace LibDebugShim
                         // Ignored.
                     }
                 }
-            });
+            }
         }
 
         private static IEnumerable<IArchiveFileEntry> GetAllFiles(IArchiveDirectoryEntry directoryEntry)

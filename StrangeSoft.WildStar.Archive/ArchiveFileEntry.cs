@@ -24,6 +24,7 @@ namespace StrangeSoft.WildStar.Archive
             CompressedSize = reader.ReadInt64();
             Hash = BitConverter.ToString(reader.ReadBytes(20)).Replace("-", "").ToLower();
             Reserved2 = reader.ReadInt32();
+            _lazyArchiveFile = new Lazy<WildstarFile>(() => Assets.LocateArchiveWithAsset(Hash));
         }
 
         public int Flags { get; }
@@ -35,7 +36,7 @@ namespace StrangeSoft.WildStar.Archive
         public bool IsCompressed => Deflate | Rar;
         public bool Rar => (Flags & 4) == 4;
         public bool Deflate => (Flags & 2) == 2;
-        public ArchiveResourceEntry ResourceEntry => Assets.LocateArchiveWithAsset(Hash)?.AssetResourceTable?.Lookup(Hash);
+        public ArchiveResourceEntry ResourceEntry => ArchiveFile?.AssetResourceTable?.Lookup(Hash);
         public override bool Exists => ExistsInArchive || ExistsOnDisk;
         public bool ExistsInArchive => ResourceEntry != null;
         public bool ExistsOnDisk => DoesThisExistOnDisk();
@@ -73,7 +74,9 @@ namespace StrangeSoft.WildStar.Archive
             return false;
         }
 
-        public BlockTableEntry TableEntry => Exists ? Assets.LocateArchiveWithAsset(Hash)?.BlockTable[ResourceEntry.BlockIndex] : null;
+        public WildstarFile ArchiveFile => _lazyArchiveFile.Value;
+
+        public BlockTableEntry TableEntry => Exists ? ArchiveFile?.BlockTable[ResourceEntry.BlockIndex] : null;
         public Stream Open(bool raw = false)
         {
             if (!Exists) throw new FileNotFoundException();
@@ -85,13 +88,6 @@ namespace StrangeSoft.WildStar.Archive
             }
         }
 
-        private static string GetBlockFileName(string hash)
-        {
-            var fullPath = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "StrangeSoft", "Wildstar", $"{sessionId:N}")).FullName;
-            return Path.Combine(fullPath, Path.ChangeExtension(hash, "tmp"));
-        }
-
-
         public string ToString(bool includeExtraData = false)
         {
             if (includeExtraData)
@@ -102,15 +98,13 @@ namespace StrangeSoft.WildStar.Archive
 
         static object fileCreationLock = new object();
         static Guid sessionId = Guid.NewGuid();
-
+        private Lazy<WildstarFile> _lazyArchiveFile;
+        private MemoryMappedFile SourceFile => ArchiveFile.File;
 
         private Stream ReadBlockData(BlockTableEntry fileBlock, bool raw = false)
         {
-            byte[] buffer = new byte[81920];
-            var lengthToCopy = CompressedSize;
-
-            
-            var ret = (Stream)Assets.LocateArchiveWithAsset(Hash).File.CreateViewStream(fileBlock.DirectoryOffset, fileBlock.BlockSize, MemoryMappedFileAccess.Read);
+            Debug.WriteLine($"Located {Name} in {ArchiveFile.Name}");
+            var ret = (Stream)SourceFile.CreateViewStream(fileBlock.DirectoryOffset, fileBlock.BlockSize, MemoryMappedFileAccess.Read);
             if (!raw)
             {
                 if (Deflate)
