@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace StrangeSoft.WildStar.Archive
+namespace StrangeSoft.WildStar
 {
     public abstract class ArchiveBlockDescriptor
     {

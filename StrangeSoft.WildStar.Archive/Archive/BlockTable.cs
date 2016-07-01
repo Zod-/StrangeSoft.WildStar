@@ -5,7 +5,7 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
 
-namespace StrangeSoft.WildStar.Archive
+namespace StrangeSoft.WildStar
 {
     public class BlockTable : IEnumerable<BlockTableEntry>
     {

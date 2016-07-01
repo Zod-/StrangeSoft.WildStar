@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 
-namespace StrangeSoft.WildStar.Archive
+namespace StrangeSoft.WildStar
 {
 
     public class ResourceContainerTable : IEnumerable<ArchiveResourceEntry>

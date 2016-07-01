@@ -5,7 +5,7 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Text;
 
-namespace StrangeSoft.WildStar.Archive
+namespace StrangeSoft.WildStar
 {
     public class ArchiveDirectoryEntry : ArchiveEntry, IArchiveDirectoryEntry
     {

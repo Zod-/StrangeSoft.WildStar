@@ -1,6 +1,4 @@
-using System.Security.Cryptography.X509Certificates;
-
-namespace StrangeSoft.WildStar.Archive
+namespace StrangeSoft.WildStar
 {
     public interface IArchiveEntry
     {

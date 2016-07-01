@@ -9,7 +9,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using StrangeSoft.WildStar.Archive;
+using StrangeSoft.WildStar;
+using StrangeSoft.WildStar.Database;
 
 namespace LibDebugShim
 {
@@ -20,10 +21,35 @@ namespace LibDebugShim
         private const string Target = PublicTestRealm;
         static void Main(string[] args)
         {
+            //var table = new FileInfo(@"D:\WSData\Live\DB\Creature2.tbl").ToTable();
+            //Console.WriteLine(string.Join(", ", table.TableFieldDescriptors));
+            //foreach (var row in table.Rows.Select(i => string.Join(", ", i.Columns)))
+            //{
+            //    Console.WriteLine(row);
+            //}
             ThreadPool.SetMaxThreads(16384, 16384);
             ThreadPool.SetMinThreads(200, 200);
             var liveTask = Task.Run(() => new WildstarAssets(new DirectoryInfo(LiveRealms)));
-            var publicTestTask = Task.Run(() => new WildstarAssets(new DirectoryInfo(PublicTestRealm)));
+            //var publicTestTask = Task.Run(() => new WildstarAssets(new DirectoryInfo(PublicTestRealm)));
+
+            foreach (
+                var tableFile in
+                    liveTask.GetAwaiter()
+                        .GetResult()
+                        .RootDirectoryEntries.SelectMany(i => i.Children)
+                        .OfType<IArchiveDirectoryEntry>()
+                        .Where(i => string.Equals(i.Name, "DB", StringComparison.InvariantCultureIgnoreCase))
+                        .SelectMany(i => i.Children)
+                        .OfType<IArchiveFileEntry>()
+                        .Where(i => i.Name.EndsWith("tbl", StringComparison.InvariantCultureIgnoreCase)))
+            {
+                Console.Write($"Exporting - {tableFile}");
+                using (var tableObject = tableFile.ToTable())
+                {
+                    tableObject.DumpToCsv($@"D:\WSData\Live\DB\{tableObject.TableHeader.TableName}.csv");
+                    Console.WriteLine(" - DONE!");
+                }
+            }
 
             //Console.WriteLine("Index files from patch.index:");
             //foreach (var indexFile in assets.IndexFiles)
@@ -43,52 +69,52 @@ namespace LibDebugShim
             //    Console.WriteLine(file);
             //}
 
-            Func<ArchiveFileEntry, string> createCsvEntry = i => $"{i},{i.Flags},{(i.ExistsOnDisk ? "Disk" : "Archive")},{i.Hash},{i.CompressedSize},{i.UncompressedSize},{i.ArchiveFile?.Name},{i.Reserved1:X16},{i.Reserved2:X16},{i.TableEntry?.DirectoryOffset},{i.TableEntry?.BlockSize}";
-            Parallel.Invoke(() =>
-            {
-                
-                var publicTestAssets = publicTestTask.GetAwaiter().GetResult();
-                using (
-                    var fileStream = File.CreateText($@"D:\WSData\filelist.ptr.{DateTimeOffset.Now:yyyyMMddhhmmss}.txt")
-                    )
-                {
-                    fileStream.WriteLine(
-                        "Path,Flags,LocationType,Hash,CompressedSize,UncompressedSize,ArchiveName,Reserved1,Reserved2,DirectoryOffset,BlockSize");
-                    foreach (
-                        var entry in
-                            publicTestAssets.RootDirectoryEntries.SelectMany(EnumerateFiles)
-                                .OfType<ArchiveFileEntry>()
-                                .Select(i => createCsvEntry(i)))
-                    {
-                        fileStream.WriteLine(entry);
-                    }
-                }
-            },
-                () =>
-                {
-                    var liveAssets = liveTask.GetAwaiter().GetResult();
-                    using (
-                        var fileStream =
-                            File.CreateText($@"D:\WSData\filelist.live.{DateTimeOffset.Now:yyyyMMddhhmmss}.txt")
-                        )
-                    {
-                        fileStream.WriteLine(
-                            "Path,Flags,LocationType,Hash,CompressedSize,UncompressedSize,ArchiveName,Reserved1,Reserved2,DirectoryOffset,BlockSize");
-                        foreach (
-                            var entry in
-                                liveAssets.RootDirectoryEntries.SelectMany(EnumerateFiles)
-                                    .OfType<ArchiveFileEntry>()
-                                    .Select(i => createCsvEntry(i)))
-                        {
-                            fileStream.WriteLine(entry);
-                        }
-                    }
-                });
-            foreach (var rootDir in liveTask.GetAwaiter().GetResult().RootDirectoryEntries)
-                ExtractFiles(rootDir, @"D:\WSData\Live");
+            //Func<ArchiveFileEntry, string> createCsvEntry = i => $"{i},{i.Flags},{(i.ExistsOnDisk ? "Disk" : "Archive")},{i.Hash},{i.CompressedSize},{i.UncompressedSize},{i.ArchiveFile?.Name},{i.Reserved1:X16},{i.Reserved2:X16},{i.TableEntry?.DirectoryOffset},{i.TableEntry?.BlockSize}";
+            //Parallel.Invoke(() =>
+            //{
 
-            foreach (var rootDir in publicTestTask.GetAwaiter().GetResult().RootDirectoryEntries)
-                ExtractFiles(rootDir, @"D:\WSData\PTR");
+            //    var publicTestAssets = publicTestTask.GetAwaiter().GetResult();
+            //    using (
+            //        var fileStream = File.CreateText($@"D:\WSData\filelist.ptr.{DateTimeOffset.Now:yyyyMMddhhmmss}.txt")
+            //        )
+            //    {
+            //        fileStream.WriteLine(
+            //            "Path,Flags,LocationType,Hash,CompressedSize,UncompressedSize,ArchiveName,Reserved1,Reserved2,DirectoryOffset,BlockSize");
+            //        foreach (
+            //            var entry in
+            //                publicTestAssets.RootDirectoryEntries.SelectMany(EnumerateFiles)
+            //                    .OfType<ArchiveFileEntry>()
+            //                    .Select(i => createCsvEntry(i)))
+            //        {
+            //            fileStream.WriteLine(entry);
+            //        }
+            //    }
+            //},
+            //    () =>
+            //    {
+            //        var liveAssets = liveTask.GetAwaiter().GetResult();
+            //        using (
+            //            var fileStream =
+            //                File.CreateText($@"D:\WSData\filelist.live.{DateTimeOffset.Now:yyyyMMddhhmmss}.txt")
+            //            )
+            //        {
+            //            fileStream.WriteLine(
+            //                "Path,Flags,LocationType,Hash,CompressedSize,UncompressedSize,ArchiveName,Reserved1,Reserved2,DirectoryOffset,BlockSize");
+            //            foreach (
+            //                var entry in
+            //                    liveAssets.RootDirectoryEntries.SelectMany(EnumerateFiles)
+            //                        .OfType<ArchiveFileEntry>()
+            //                        .Select(i => createCsvEntry(i)))
+            //            {
+            //                fileStream.WriteLine(entry);
+            //            }
+            //        }
+            //    });
+            //foreach (var rootDir in liveTask.GetAwaiter().GetResult().RootDirectoryEntries)
+            //    ExtractFiles(rootDir, @"D:\WSData\Live");
+
+            //foreach (var rootDir in publicTestTask.GetAwaiter().GetResult().RootDirectoryEntries)
+            //    ExtractFiles(rootDir, @"D:\WSData\PTR");
             //        Parallel.ForEach(liveAssets.RootDirectoryEntries,
             //rootDir => ExtractFiles(rootDir, @"D:\WSData\Live"));
             //Parallel.ForEach(publicTestAssets.RootDirectoryEntries,

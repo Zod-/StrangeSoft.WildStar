@@ -7,8 +7,8 @@
     <ProjectGuid>{67093B6E-AD3A-4760-BA79-1238232BAD9E}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>StrangeSoft.WildStar.Archive</RootNamespace>
-    <AssemblyName>StrangeSoft.WildStar.Archive</AssemblyName>
+    <RootNamespace>StrangeSoft.WildStar</RootNamespace>
+    <AssemblyName>StrangeSoft.WildStar</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -45,25 +45,34 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AssetArchiveResourceContainerDescriptor.cs" />
-    <Compile Include="ArchiveBlockDescriptor.cs" />
-    <Compile Include="ArchiveDirectoryEntry.cs" />
-    <Compile Include="ArchiveEntry.cs" />
-    <Compile Include="ArchiveFileEntry.cs" />
-    <Compile Include="ArchiveIndex.cs" />
-    <Compile Include="ArchiveResourceEntry.cs" />
-    <Compile Include="BlockTable.cs" />
-    <Compile Include="BlockTableEntry.cs" />
-    <Compile Include="FileHeader.cs" />
-    <Compile Include="WildstarFile.cs" />
-    <Compile Include="IArchiveDirectoryEntry.cs" />
-    <Compile Include="IArchiveEntry.cs" />
-    <Compile Include="IArchiveFileEntry.cs" />
-    <Compile Include="PackDescriptor.cs" />
+    <Compile Include="Archive\AssetArchiveResourceContainerDescriptor.cs" />
+    <Compile Include="Archive\ArchiveBlockDescriptor.cs" />
+    <Compile Include="Archive\ArchiveDirectoryEntry.cs" />
+    <Compile Include="Archive\ArchiveEntry.cs" />
+    <Compile Include="Archive\ArchiveFileEntry.cs" />
+    <Compile Include="Archive\ArchiveIndex.cs" />
+    <Compile Include="Archive\ArchiveResourceEntry.cs" />
+    <Compile Include="Archive\BlockTable.cs" />
+    <Compile Include="Archive\BlockTableEntry.cs" />
+    <Compile Include="Archive\FileHeader.cs" />
+    <Compile Include="Archive\WildstarFile.cs" />
+    <Compile Include="Archive\IArchiveDirectoryEntry.cs" />
+    <Compile Include="Archive\IArchiveEntry.cs" />
+    <Compile Include="Archive\IArchiveFileEntry.cs" />
+    <Compile Include="Archive\PackDescriptor.cs" />
+    <Compile Include="Database\FieldType.cs" />
+    <Compile Include="Database\TableHeader.cs" />
+    <Compile Include="Database\TableFieldDescriptor.cs" />
+    <Compile Include="Database\WildstarDatabaseExtensions.cs" />
+    <Compile Include="Database\WildstarRowCollection.cs" />
+    <Compile Include="Database\WildstarTable.cs" />
+    <Compile Include="Database\WildstarTableColumn.cs" />
+    <Compile Include="Database\WildstarTableRow.cs" />
+    <Compile Include="Model\M3Model.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ResourceContainerTable.cs" />
-    <Compile Include="Signatures.cs" />
-    <Compile Include="WildstarAssets.cs" />
+    <Compile Include="Archive\ResourceContainerTable.cs" />
+    <Compile Include="Archive\Signatures.cs" />
+    <Compile Include="Archive\WildstarAssets.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace StrangeSoft.WildStar.Archive
+namespace StrangeSoft.WildStar
 {
     public class ArchiveResourceEntry : IComparable<ArchiveResourceEntry>, IComparable<IArchiveFileEntry>
     {

@@ -1,16 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Security.Cryptography;
-using SharpCompress.Archive.Rar;
 using SharpCompress.Compressor.LZMA;
-using SharpCompress.Compressor.PPMd;
 using CompressionMode = System.IO.Compression.CompressionMode;
 using DeflateStream = System.IO.Compression.DeflateStream;
 
-namespace StrangeSoft.WildStar.Archive
+namespace StrangeSoft.WildStar
 {
     public class ArchiveFileEntry : ArchiveEntry, IArchiveFileEntry
     {

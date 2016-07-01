@@ -1,4 +1,4 @@
-namespace StrangeSoft.WildStar.Archive
+namespace StrangeSoft.WildStar
 {
     public abstract class ArchiveEntry : IArchiveEntry
     {
