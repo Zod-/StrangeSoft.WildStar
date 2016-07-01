@@ -64,13 +64,16 @@ namespace StrangeSoft.WildStar.Database
                                 var next = stringReader.Read();
                                 if (next == 0 || next == -1)
                                 {
-                                    if (valueBuilder.Length == 0 && next == 0) continue;
                                     break;
                                 }
-                                valueBuilder.Append((char)next);
+                                valueBuilder.Append((char) next);
                             }
                             ret.Value = valueBuilder.ToString();
                         }
+                    }
+                    else
+                    {
+                        ret.Value = null;
                     }
                     break;
             }

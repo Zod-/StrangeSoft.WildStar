@@ -6,6 +6,8 @@ using System.Text;
 
 namespace StrangeSoft.WildStar.Database
 {
+    
+
     public class WildstarTable : IDisposable
     {
         private readonly Stream _stream;

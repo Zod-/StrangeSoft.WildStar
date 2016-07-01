@@ -6,10 +6,10 @@ namespace StrangeSoft.WildStar
 {
     public class WildstarAssets
     {
-        private List<WildstarFile> _fileList = new List<WildstarFile>();
+        private readonly List<WildstarFile> _fileList = new List<WildstarFile>();
         public IEnumerable<WildstarFile> IndexFiles => _fileList.Take(IndexCount);
         public IEnumerable<WildstarFile> ArchiveFiles => _fileList.Skip(IndexCount).Reverse();
-
+        public IArchiveDirectoryEntry RootDirectory { get; }
         public IEnumerable<IArchiveDirectoryEntry> RootDirectoryEntries => IndexFiles.Select(i => new ArchiveDirectoryEntry(i, this, null, (int)i.AssetIndexEntry.RootBlock, null));
         public int IndexCount { get; }
         public DirectoryInfo BaseDirectory { get; }
@@ -44,6 +44,8 @@ namespace StrangeSoft.WildStar
                     _fileList.Add(file);
                 }
             }
+
+            RootDirectory = new MergedArchiveDirectoryEntry(this);
         }
 
         public IEnumerable<IArchiveEntry> GetArchiveEntries()

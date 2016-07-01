@@ -31,7 +31,7 @@ namespace LibDebugShim
             ThreadPool.SetMinThreads(200, 200);
             var liveTask = Task.Run(() => new WildstarAssets(new DirectoryInfo(LiveRealms)));
             //var publicTestTask = Task.Run(() => new WildstarAssets(new DirectoryInfo(PublicTestRealm)));
-
+            liveTask.GetAwaiter().GetResult().ToDatabase().DumpToSql(@"D:\WSData\live.sql");
             foreach (
                 var tableFile in
                     liveTask.GetAwaiter()

@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace StrangeSoft.WildStar.Database
 {
     public enum FieldType : uint

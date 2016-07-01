@@ -55,6 +55,7 @@
     <Compile Include="Archive\BlockTable.cs" />
     <Compile Include="Archive\BlockTableEntry.cs" />
     <Compile Include="Archive\FileHeader.cs" />
+    <Compile Include="Archive\MergedArchiveDirectoryEntry.cs" />
     <Compile Include="Archive\WildstarFile.cs" />
     <Compile Include="Archive\IArchiveDirectoryEntry.cs" />
     <Compile Include="Archive\IArchiveEntry.cs" />
@@ -63,12 +64,14 @@
     <Compile Include="Database\FieldType.cs" />
     <Compile Include="Database\TableHeader.cs" />
     <Compile Include="Database\TableFieldDescriptor.cs" />
+    <Compile Include="Database\WildstarDatabase.cs" />
     <Compile Include="Database\WildstarDatabaseExtensions.cs" />
     <Compile Include="Database\WildstarRowCollection.cs" />
     <Compile Include="Database\WildstarTable.cs" />
     <Compile Include="Database\WildstarTableColumn.cs" />
     <Compile Include="Database\WildstarTableRow.cs" />
     <Compile Include="Model\M3Model.cs" />
+    <Compile Include="Model\ModelExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Archive\ResourceContainerTable.cs" />
     <Compile Include="Archive\Signatures.cs" />
