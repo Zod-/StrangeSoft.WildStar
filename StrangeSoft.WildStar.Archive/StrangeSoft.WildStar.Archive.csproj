@@ -72,6 +72,9 @@
     <Compile Include="Database\WildstarTableRow.cs" />
     <Compile Include="Model\M3Model.cs" />
     <Compile Include="Model\ModelExtensions.cs" />
+    <Compile Include="Model\ModelHeader.cs" />
+    <Compile Include="Model\Skin.cs" />
+    <Compile Include="Model\Vertex.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Archive\ResourceContainerTable.cs" />
     <Compile Include="Archive\Signatures.cs" />

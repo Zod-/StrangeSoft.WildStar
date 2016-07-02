@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using StrangeSoft.WildStar;
 using StrangeSoft.WildStar.Database;
+using StrangeSoft.WildStar.Model;
 
 namespace LibDebugShim
 {
@@ -29,6 +30,10 @@ namespace LibDebugShim
             //}
             ThreadPool.SetMaxThreads(16384, 16384);
             ThreadPool.SetMinThreads(200, 200);
+
+            var model = new M3Model(new FileInfo(@"D:\WSData\Live\Art\Character\Aurin\Female\Aurin_F.m3"));
+
+
             var liveTask = Task.Run(() => new WildstarAssets(new DirectoryInfo(LiveRealms)));
             //var publicTestTask = Task.Run(() => new WildstarAssets(new DirectoryInfo(PublicTestRealm)));
             liveTask.GetAwaiter().GetResult().ToDatabase().DumpToSql(@"D:\WSData\live.sql");
