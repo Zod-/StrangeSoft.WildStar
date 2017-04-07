@@ -34,8 +34,11 @@ namespace StrangeSoft.WildStar
             }
             IndexCount = _fileList.Count;
             var coreDataFileName = Path.Combine(PatchDirectory.FullName, "CoreData.archive");
-            var coreDataFile = new WildstarFile(new FileInfo(coreDataFileName));
-            _fileList.Add(coreDataFile);
+            FileInfo coreDataFileInfo = new FileInfo(coreDataFileName);
+            if (coreDataFileInfo.Exists) {
+                var coreDataFile = new WildstarFile(new FileInfo(coreDataFileName));
+                _fileList.Add(coreDataFile);
+            }
             foreach (var fileName in filesToLoad.Select(i => Path.ChangeExtension(i.Name, ".archive")))
             {
                 var file = GetFile(fileName);
